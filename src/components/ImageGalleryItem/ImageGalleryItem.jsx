@@ -1,29 +1,19 @@
-import { Component } from "react";
+// import { Component } from "react";
 import { GalleryImage, GalleryItemWrapper } from "./ImageGalleryItem.styled";
 
-class ImageGalleryItem extends Component {
-  handleClick = () => {
-    const { largeImageURL, tags, onClick } = this.props;
-    onClick({ largeImageURL, tags });
+const ImageGalleryItem = ({ webformatURL, tags, onClick }) => {
+  const handleClick = () => {
+    onClick({ largeImageURL: webformatURL, tags });
   };
 
-  render() {
-    const { webformatURL, tags } = this.props;
-
-    return (
-      <GalleryItemWrapper onClick={this.handleClick}>
-        <GalleryImage
-          src={webformatURL}
-          alt={tags}          
-        />
-      </GalleryItemWrapper>
-    );
-  }
-}
-
-// ImageGalleryItem.propTypes = {
-//   imageUrl: PropTypes.string.isRequired,
-//   alt: PropTypes.string.isRequired,
-// };
+  return (
+    <GalleryItemWrapper onClick={handleClick}>
+      <GalleryImage
+        src={webformatURL}
+        alt={tags}
+      />
+    </GalleryItemWrapper>
+  );
+};
 
 export default ImageGalleryItem;

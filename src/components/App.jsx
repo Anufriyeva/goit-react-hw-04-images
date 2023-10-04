@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useEffect, useState } from 'react';
 import {fetchImages} from '../Service/Service';
 import Searchbar from './Searchbar/Searchbar';
 import ImageGallery from './ImageGallery/ImageGallery';
@@ -12,138 +12,77 @@ import {
 
 const ITEMS_PER_PAGE = 12;
 
-class App extends Component {
-  state = {
-  searchQuery: '',
-  images: [],
-  page: 1,
-  quantityPage: null,
-  isModalOpen: false,
-  isLoading: false,
-  largeImageURL: null,
-  error: null,
-  tags: null,
-};
-  
-componentDidUpdate(_, prevState) {
-    const { page, searchQuery } = this.state;
+const App = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [images, setImages] = useState([]);
+  const [page, setPage] = useState(1);
+  const [quantityPage, setQuantityPage] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [largeImageURL, setLargeImageURL] = useState(null);
+  const [tags, setTags] = useState(null);
+  const [error, setError] = useState(null);
 
-    if (
-      page !== prevState.page ||
-      searchQuery !== prevState.searchQuery
-    ) {
-      this.handleSubmit();
-    }
-  }
+  useEffect(() => {
+    const handleSubmit = async () => {
+      if (!searchQuery) return;
 
-  // handleInputChange = (e) => {
-  //   this.setState({ searchQuery: e.target.value });
-  // };
+      setIsLoading(true);
 
+      try {
+        const { hits, totalHits } = await fetchImages(searchQuery, page);
 
-  handleSubmit = async () => {
-    const { searchQuery, page } = this.state;
+        if (hits.length === 0) {
+          setError('Error fetching images');
+          return;
+        }
 
-    this.setLoadingState(true);
-    
-    try {
-      const { hits, totalHits } = await fetchImages(searchQuery, page);
-    
-    if (hits.length === 0) {
-      window.alert('Error fetching images');
-      return;
-    }
-      
-    this.updateImages(hits, totalHits);
-    } catch (err) {
-      this.setState({ error: err.message });
-    } finally {
-      this.setLoadingState(false);
-    }
-  };
-  
-  setLoadingState = isLoading => {
-    this.setState({ isLoading });
+        setImages((prevImages) => [...prevImages, ...hits]);
+        setQuantityPage(Math.ceil(totalHits / ITEMS_PER_PAGE));
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    handleSubmit();
+  }, [searchQuery, page]);
+
+  const handleSubmitSearch = (newSearchQuery) => {
+    resetImages();
+    setSearchQuery(newSearchQuery);
   };
 
-  updateImages = (hits, totalHits) => {
-    this.setState(prev => ({
-      images: [...prev.images, ...hits],
-      quantityPage: Math.ceil(totalHits / ITEMS_PER_PAGE),
-    }));
+  const resetImages = () => {
+    setPage(1);
+    setQuantityPage(null);
+    setImages([]);
+    setError(null);
   };
 
-  handleSubmitSearch = searchQuery => {
-  this.resetImages();
-  this.setState({ searchQuery });
+  const openModal = (data) => {
+    setIsLoading(true);
+    setIsModalOpen(true);
+    setLargeImageURL(data.largeImageURL);
+    setTags(data.tags);
   };
 
-  resetImages = () => {
-    this.setState({
-      page: 1,
-      quantityPage: null,
-      images: [],
-      error: null,
-    });
+  const closeModal = () => {
+    setIsLoading(false);
+    setIsModalOpen(false);
   };
 
-
-
-  openModal = (data) => {
-    this.setLoadingState(true);
-    this.setState({ isModalOpen: true, ...data });
-  };  
-
-  closeModal = () => {
-    this.setLoadingState(false);
-    this.setState({ isModalOpen: false });
+  const loadMoreImages = () => {
+    setPage((prevPage) => prevPage + 1);
   };
 
-  loadMoreImages = () => {
-    this.setState(prev => ({ page: prev.page + 1 }));
-  };
-  
+  return (
+    <StyledAppContainer>
+      <Searchbar onSubmit={handleSubmitSearch} />
+      {isLoading && <Loader />}
 
-//   loadMoreImages = async () => {
-//   const { searchQuery, page, perPage } = this.state;
-//   try {
-//     const newImages = await fetchImages(searchQuery, page + 1);
-//     this.setState((prevState) => ({
-//       images: [...prevState.images, ...newImages.slice(0, perPage)], 
-//       page: prevState.page + 1,
-//     }));
-//   } catch (error) {
-//     console.error('Error fetching more images:', error);
-//   }
-// };
-
-  render() {
-    const {
-      images,
-      page,
-      quantityPage,
-      isLoading,
-      isModalOpen,
-      largeImageURL,
-      tags,
-      error
-    } = this.state;
-
-
-    return (
-      <StyledAppContainer>
-        <Searchbar onSubmit={this.handleSubmitSearch} />
-        {/* <StyledImageList>
-          {images.map((image) => (
-            <div key={image.id} onClick={() => this.openModal(image.largeImageURL)}>
-              <img src={image.webformatURL} alt="" />
-            </div>
-          ))}
-        </StyledImageList> */}
-
-        {isLoading && <Loader />}
-
-        {error ? ( // Перевіряємо, чи є помилка
+      {error ? (
         <div className="error-message">{error}</div>
       ) : (
         <>
@@ -151,26 +90,21 @@ componentDidUpdate(_, prevState) {
             <Modal
               largeImageURL={largeImageURL}
               tags={tags}
-              closeModal={this.closeModal}
+              closeModal={closeModal}
             />
           )}
 
           {images.length > 0 && (
-            <ImageGallery
-              hits={images}
-              onClick={this.openModal}
-            />
+            <ImageGallery hits={images} onClick={openModal} />
           )}
 
           {page < quantityPage && (
-            <Button loadMoreImages={this.loadMoreImages} />
+            <Button loadMoreImages={loadMoreImages} />
           )}
         </>
       )}
-
-      </StyledAppContainer>
-    );
-  }
-}
+    </StyledAppContainer>
+  );
+};
 
 export default App;

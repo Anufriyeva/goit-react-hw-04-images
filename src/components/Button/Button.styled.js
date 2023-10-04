@@ -9,4 +9,5 @@ export const LoadMoreButton = styled.button`
   font-size: 16px;
   margin-top: 20px;
   border-radius: 4px;
+  cursor: pointer;
 `;
